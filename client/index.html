@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>LiveChat</title>
+        <script src="/socket.io/socket.io.js"></script>
+        <script type="module">
+            const getUsername = async () => {
+                let user = JSON.parse(localStorage.getItem('user'))
+
+                if (user) {
+                    console.log({...user})
+                    return user
+                }
+
+                const res = await fetch('https://random-data-api.com/api/users/random_user')
+                const { username, avatar } = await res.json()
+                user = { username, avatar }
+                localStorage.setItem('user', JSON.stringify(user))
+                return user
+            }
+
+            const { username, avatar } = await getUsername()
+            const socket = io({
+                auth: {
+                    username,
+                    avatar,
+                    serverOffset: 0,
+                },
+            })
+
+            const form = document.getElementById('form')
+            const input = document.getElementById('input')
+            const messages = document.getElementById('messages')
+            const banner = document.getElementById('banner')
+
+            const avatarProfile = `<img id='avatar-profile' src=${avatar} alt=${username}>`
+            const usernameProfile = `<span id="user-profile">${username}</span>`
+
+            banner.insertAdjacentHTML('beforeend', avatarProfile)
+            banner.insertAdjacentHTML('beforeend', usernameProfile)
+
+            socket.on('chat message', (msg, serverOffset, username, avatar) => {
+                const item = `<li>
+                    <img class="avatar" src=${avatar} alt=${username} width=40 height=40 >
+                    <div>
+                        <span class="username">${username}</span>
+                        <p class="message">${msg}</p>
+                        </div>
+                    </li>`
+                messages.insertAdjacentHTML('beforeend', item)
+                socket.auth.serverOffset = serverOffset
+                messages.scrollTop = messages.scrollHeight
+            })
+
+            form?.addEventListener('submit', (e) => {
+                e.preventDefault()
+                if (input.value) {
+                    socket.emit('chat message', input.value)
+                    input.value = ''
+                }
+            })
+        </script>
+        <style>
+            *,
+            *::after,
+            *::before {
+                box-sizing: border-box;
+            }
+
+            :root {
+                color-scheme: light dark;
+            }
+
+            body {
+                margin: 0;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                    Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                display: grid;
+                place-content: center;
+                height: 100vh;
+                padding: 20px;
+                grid-template-rows: 1fr;
+            }
+
+            #chat {
+                border: 1px solid #ccc;
+                border-radius: 10px;
+                overflow: hidden;
+                width: 350px;
+                height: 100%;
+                position: relative;
+            }
+
+            #form {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                display: flex;
+                height: 48px;
+                padding: 4px;
+            }
+
+            #input {
+                border-radius: 9999px;
+                border: 1px solid #eee;
+                flex: 1;
+                margin: 4px;
+                padding: 0 8px;
+            }
+
+            #input:focus {
+                outline: 0;
+            }
+
+            #form > button {
+                background: #09f;
+                color: #fff;
+                border: 0;
+                margin: 4px;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            #form > button:hover {
+                background: #0cf;
+            }
+
+            #messages {
+                list-style-type: none;
+                width: 100%;
+                margin: 0;
+                padding: 4px;
+                overflow-y: scroll;
+                height: 100%;
+                scroll-behavior: smooth;
+                padding-bottom: 98px;
+            }
+
+            #messages > li {
+                display: flex;
+                align-items: flex-start;
+                width: fit-content;
+                max-width: 95%;
+                margin:4px;
+                gap: 4px;
+            }
+            
+            #messages>li>div{
+                padding: 0.2rem 1rem;
+                background: rgb(35, 53, 45);
+                border-radius: 0 12px 12px;
+
+            }
+
+            .avatar{
+                border: 1px solid #cccccc5b;
+                border-radius: 100%;
+            }
+
+            .message{
+                margin: 0;
+            }
+
+            .username{
+                font-size: 15px;
+                color: rgb(151, 83, 216);
+                font-weight: bold;
+            }
+
+            #banner{
+                width: 100%;
+                height: 50px;
+                background: rgb(4, 39, 22);
+                border-bottom: 1px solid #cccccc42;
+                display: flex;
+                justify-content: flex-start;
+                align-items: center;
+                gap: 7px;
+                padding: 3px 8px;
+            }
+            #avatar-profile{
+                width: 45px;
+                height: 45px;
+                border: 1px solid #cccccc42;
+                border-radius: 100%;
+            }
+            #user-profile{
+                font-size: medium;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <section id="chat">
+            <div id="banner"></div>
+            <ul id="messages"></ul>
+            <form id="form">
+                <input
+                    type="text"
+                    name="message"
+                    id="input"
+                    placeholder="Type a message"
+                    autocomplete="off" />
+                <button type="submit">Enviar</button>
+            </form>
+        </section>
+    </body>
+</html>
